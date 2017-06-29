@@ -5,8 +5,16 @@ uint32_t last_rnb_time = 0;
  */
 void init(){
 	set_rgb(0, 255, 255);
-	delay_ms(5000);
-	set_rgb(0, 0, 0);
+	delay_ms(8000);
+	//walk(0,100);
+	//while(is_moving() != -1);
+	//walk(3,100);
+	//while(is_moving() != -1);
+	//walk(6,80);
+	//while(is_moving() != -1);
+	//walk(7,80);
+	//while(is_moving() != -1);
+	//set_rgb(0, 0, 0);
 	last_rnb_time = get_time();
 }
 
@@ -37,28 +45,28 @@ void loop(){
 	{
 		if(last_good_rnb.bearing <= 30 && last_good_rnb.bearing >= -30)
 		{
-			//walk(0, 30);
+			walk(0, 30);
 			set_rgb(255, 255, 0);
 			delay_ms(250);
 			set_rgb(0, 0, 0);
 		}
 		else if((last_good_rnb.bearing <= -150 && last_good_rnb.bearing >= -180) || (last_good_rnb.bearing <= 180 && last_good_rnb.bearing >= 150))
 		{
-			//walk(3, 30);
+			walk(3, 30);
 			set_rgb(0, 255, 255);
 			delay_ms(250);
 			set_rgb(0, 0, 0);
 		}
 		else if(last_good_rnb.bearing > 30 && last_good_rnb.bearing < 150)
 		{
-			//walk(6, 20);
+			walk(7, 20);
 			set_rgb(255, 0, 255);
 			delay_ms(250);
 			set_rgb(0, 0, 0);			
 		}
 		else if(last_good_rnb.bearing < -30 && last_good_rnb.bearing > -150)
 		{
-			//walk(7, 20);
+			walk(6, 20);
 
 		}	
 	}
