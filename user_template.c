@@ -1,4 +1,6 @@
 #include "user_template.h"
+
+#define walk_on
 uint32_t last_rnb_time = 0;
 /*
  * any code in this function will be run once, when the robot starts.
@@ -22,13 +24,14 @@ void init(){
  * the code in this function will be called repeatedly, as fast as it can execute.
  */
 void loop(){ 
-	if(get_time() - last_rnb_time > 5000)
+	#ifdef walk_on
+	if(get_time() - last_rnb_time > 2000)
 	{
 		broadcast_rnb_data();
 		last_rnb_time = get_time();
-		set_rgb(0, 255, 0);
-		delay_ms(250);
-		set_rgb(0, 0, 0);
+		//set_rgb(0, 255, 0);
+		//delay_ms(250);
+		//set_rgb(0, 0, 0);
 	}
 	if(rnb_updated)
 	{
@@ -36,40 +39,43 @@ void loop(){
 		printf("range=%u\n\r", last_good_rnb.range);
 		printf("bearing=%d\n\r", last_good_rnb.bearing);
 		printf("heading=%d\n\r", last_good_rnb.heading);
-		rnb_updated = 0;
-		set_rgb(0, 0, 255);
-		delay_ms(250);
-		set_rgb(0, 0, 0);		
-	}
-	if(is_moving() == -1)
-	{
-		if(last_good_rnb.bearing <= 30 && last_good_rnb.bearing >= -30)
+		stop_move();
+		if(is_moving() == -1)
 		{
-			walk(0, 30);
-			set_rgb(255, 255, 0);
-			delay_ms(250);
-			set_rgb(0, 0, 0);
-		}
-		else if((last_good_rnb.bearing <= -150 && last_good_rnb.bearing >= -180) || (last_good_rnb.bearing <= 180 && last_good_rnb.bearing >= 150))
-		{
-			walk(3, 30);
-			set_rgb(0, 255, 255);
-			delay_ms(250);
-			set_rgb(0, 0, 0);
-		}
-		else if(last_good_rnb.bearing > 30 && last_good_rnb.bearing < 150)
-		{
-			walk(7, 20);
-			set_rgb(255, 0, 255);
-			delay_ms(250);
-			set_rgb(0, 0, 0);			
-		}
-		else if(last_good_rnb.bearing < -30 && last_good_rnb.bearing > -150)
-		{
-			walk(6, 20);
+			if(last_good_rnb.bearing <= 30 && last_good_rnb.bearing >= -30)
+			{
+				walk(0, 30);
+				//set_rgb(255, 255, 0);
+				//delay_ms(250);
+				//set_rgb(0, 0, 0);
+			}
+			else if((last_good_rnb.bearing <= -150 && last_good_rnb.bearing >= -180) || (last_good_rnb.bearing <= 180 && last_good_rnb.bearing >= 150))
+			{
+				walk(3, 30);
+				//set_rgb(0, 255, 255);
+				//delay_ms(250);
+				//set_rgb(0, 0, 0);
+			}
+			else if(last_good_rnb.bearing > 30 && last_good_rnb.bearing < 150)
+			{
+				walk(7, 20);
+				//set_rgb(255, 0, 255);
+				//delay_ms(250);
+				//set_rgb(0, 0, 0);
+			}
+			else if(last_good_rnb.bearing < -30 && last_good_rnb.bearing > -150)
+			{
+				walk(6, 20);
 
-		}	
+			}
+		}
+		rnb_updated = 0;
+		//set_rgb(0, 0, 255);
+		//delay_ms(250);
+		//set_rgb(0, 0, 0);		
 	}
+	#endif
+	delay_ms(10);
 }
 
 /*
