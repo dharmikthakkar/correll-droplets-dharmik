@@ -1,7 +1,8 @@
 #include "user_template.h"
 
 //#define walk_on
-#define rnb_broadcast_sw
+//#define rnb_broadcast_sw
+#define master_calib
 uint32_t last_rnb_time = 0;
 uint32_t last_rnb_print_time = 0;
 
@@ -22,6 +23,9 @@ void init(){
 	//set_rgb(0, 0, 0);
 	last_rnb_time = get_time();
 //	ir_cmd(ALL_DIRS, "set_motors 0 0 200 200", 22);
+#ifdef master_calib
+	auto_calibration();
+#endif
 }
 
 
@@ -133,29 +137,47 @@ void sendMotorsMsg(uint8_t dir, int16_t mot0, int16_t mot1, int16_t mot2){
 	}while(rv == 0);
 }
 
+void print_rnb_data(void){
+	printf("id=%04X\n\r", last_good_rnb.id);
+	printf("range=%u\n\r", last_good_rnb.range);
+	printf("bearing=%d\n\r", last_good_rnb.bearing);
+	printf("heading=%d\n\r", last_good_rnb.heading);
+}
+
 void auto_calibration(){
 	uint8_t rv = 0;
-	uint8_t right_motor_0 = 0;
-	uint8_t left_motor_0 = 0;
+	uint8_t motor1_0 = 0;
+	uint8_t motor2_0 = 0;
 	uint8_t drift_check_i=0;
 	rnb cal_temp_rnb;
-	sendMotorsMsg(0, 0, 500, 500);
+	int16_t dir0_init_val[3] = {0, 500, -500};
+	sendMotorsMsg(0, dir0_init_val[0], dir0_init_val[1], dir0_init_val[2]);
 	for(drift_check_i = 0; drift_check_i < 3; drift_check_i++){
 		rnb_updated = 0;
 		while(!rnb_updated);
 		rnb_updated = 0;
 		if(last_good_rnb.heading < 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
+		print_rnb_data();
 		cal_temp_rnb = last_good_rnb;
 		do{
 			rv = ir_targeted_cmd(ALL_DIRS, "move_steps 0 100", 16, 0x5D61);
 		}while(rv == 0);
+		delay_ms(16000);
 		rnb_updated = 0;
 		while(!rnb_updated);
 		rnb_updated = 0;
+		print_rnb_data();
 		if(last_good_rnb.heading < 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
-		if(last_good_rnb.heading > cal_temp_rnb.heading) right_motor_0++;
-		else if(last_good_rnb.heading < cal_temp_rnb.heading) left_motor_0++;
+		if(last_good_rnb.heading > cal_temp_rnb.heading){
+			motor1_0++;
+			printf("\n\rright motor drifting\n\r");
+		}
+		else if(last_good_rnb.heading < cal_temp_rnb.heading){
+			motor2_0++;
+			printf("\n\rleft motor drifting\n\r");		
+		}
 	}
+	
 	
 }
 

@@ -15,3 +15,5 @@ void		loop(void);
 void		handle_msg(ir_msg* msg_struct);
 
 void		auto_calibration(void);
+
+void		print_rnb_data(void);
