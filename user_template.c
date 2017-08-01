@@ -153,44 +153,70 @@ void auto_calibration(){
 	int8_t drift_check_i=0;
 	rnb cal_temp_rnb;
 	int16_t dir0_val[3] = {0, 500, -500};
+	uint32_t reset_init_time;
 	sendMotorsMsg(0, dir0_val[0], dir0_val[1], dir0_val[2]);
+	rnb_updated = 0;
+	reset_init_time = get_time();
+	while(!rnb_updated){
+		if((get_time() - reset_init_time) > 20000){
+//			do{
+			rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, 0x5D61);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+//			}while(rv == 0);
+			delay_ms(20000);
+			sendMotorsMsg(0, dir0_val[0], dir0_val[1], dir0_val[2]);
+			reset_init_time = get_time();
+		}
+	}
+	rnb_updated = 0;
+	if(last_good_rnb.heading <= 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
+	print_rnb_data();
+	cal_temp_rnb = last_good_rnb;
 	do 
 	{
 			motor1_0 = 0;
 			motor2_0 = 0;
-			rnb_updated = 0;
-			while(!rnb_updated);
-			rnb_updated = 0;
-			if(last_good_rnb.heading <= 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
-			print_rnb_data();
+			motor1_0_drift = 0;
+			motor2_0_drift = 0;
 			for(drift_check_i = 0; drift_check_i < 3; drift_check_i++){
-				cal_temp_rnb = last_good_rnb;
-				do{
-					rv = ir_targeted_cmd(ALL_DIRS, "move_steps 0 100", 16, 0x5D61);
-				}while(rv == 0);
+				//do{
+					//rv = ir_targeted_cmd(ALL_DIRS, "move_steps 0 100", 16, 0x5D61);
+				//}while(rv == 0);
+				printf("\n\rmoving droplet\n\r");
 				delay_ms(16000);
 				rnb_updated = 0;
-				while(!rnb_updated);
+				reset_init_time = get_time();
+				while(!rnb_updated){
+					if((get_time() - reset_init_time) > 20000){
+//						do{
+							rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, 0x5D61);				//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+//						}while(rv == 0);
+						delay_ms(20000);
+						sendMotorsMsg(0, dir0_val[0], dir0_val[1], dir0_val[2]);
+						reset_init_time = get_time();
+					}
+				}
 				rnb_updated = 0;
 				print_rnb_data();
 				if(last_good_rnb.heading <= 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
-				if(last_good_rnb.heading > cal_temp_rnb.heading && (last_good_rnb.heading - cal_temp_rnb.heading) < 20){
+				if(last_good_rnb.heading > cal_temp_rnb.heading && (last_good_rnb.heading - cal_temp_rnb.heading) > 20){
 					motor1_0++;
 					motor1_0_drift = (motor1_0_drift + (last_good_rnb.heading - cal_temp_rnb.heading)) / motor1_0;
-					printf("\n\rright motor drifting by %d\n\r", motor1_0_drift);
+					printf("\n\rAverage right motor drift is %d\n\r", motor1_0_drift);
 				}
-				else if(last_good_rnb.heading < cal_temp_rnb.heading && (cal_temp_rnb.heading - last_good_rnb.heading) < 20){
+				else if(last_good_rnb.heading < cal_temp_rnb.heading && (cal_temp_rnb.heading - last_good_rnb.heading) > 20){
 					motor2_0++;
 					motor2_0_drift = (motor2_0_drift + (cal_temp_rnb.heading - last_good_rnb.heading))  / motor2_0;
-					printf("\n\rleft motor drifting by %d\n\r", motor2_0_drift);
+					printf("\n\rAverage left motor drift is %d\n\r", motor2_0_drift);
 				}
-				
+				cal_temp_rnb = last_good_rnb;
 				//if left or right drift count equals 2 break for loop no need of third iteration
 				if(motor1_0 == 2 || motor2_0 == 2) break;
 				
 				//also check the difference in individual drift values. if the difference is unusually large (more than 100-125) the result is erroneous. this is due to the heading angle varies over a range of 15-20 degrees when the droplet is far
 				//one possible solution could be to not increment the drift count for difference less than  15-20 degrees (to be tested for confirmation)
 			}
+			
+			printf("\n\rmotor1_0 = %hu motor2_0 = %hu\n\r", motor1_0, motor2_0);
 			
 			//using the averaged drift_value, reduce the weight of the drifting motor by the averaged value. For eg: if the drift value (left motor i.e motor 2) is 111, set motors to 0 500 -389 from 0 500 -500
 			//180 is a magic number as of now. The check is to ensure that the change in weights is not implemented due to erroneous results
@@ -201,7 +227,8 @@ void auto_calibration(){
 				dir0_val[2] = dir0_val[2] + motor2_0_drift;
 			}
 			sendMotorsMsg(0, dir0_val[0], dir0_val[1], dir0_val[2]);
+			printf("\n\rUpdating motor settings with %d %d %d\n\r", dir0_val[0], dir0_val[1], dir0_val[2]);
 
-	} while (motor1_0 != 0 && motor2_0 != 0);
+	} while (motor1_0 != 0 || motor2_0 != 0);
 }
 
