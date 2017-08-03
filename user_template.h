@@ -17,3 +17,4 @@ void		handle_msg(ir_msg* msg_struct);
 void		auto_calibration(void);
 
 void		print_rnb_data(void);
+void		auto_calibration_dir_6(void);
