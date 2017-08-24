@@ -4,6 +4,8 @@
 
 #define MOTORS_MSG_FLAG 'M'
 
+#define SLAVE 0x73AF
+
 typedef struct motors_msg_struct{
 	char flag;
 	uint8_t dir;

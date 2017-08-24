@@ -1,8 +1,8 @@
 #include "user_template.h"
 
 //#define walk_on
-//#define rnb_broadcast_sw
-#define master_calib
+#define rnb_broadcast_sw
+//#define master_calib
 uint32_t last_rnb_time = 0;
 uint32_t last_rnb_print_time = 0;
 
@@ -161,7 +161,7 @@ void auto_calibration(){
 	while(!rnb_updated){
 		if((get_time() - reset_init_time) > 20000){
 //			do{
-			rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, 0x5D61);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+			rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
 //			}while(rv == 0);
 			delay_ms(20000);
 			sendMotorsMsg(0, dir0_val[0], dir0_val[1], dir0_val[2]);
@@ -180,7 +180,7 @@ void auto_calibration(){
 			motor2_0_drift = 0;
 			for(drift_check_i = 0; drift_check_i < 3; drift_check_i++){
 				do{
-					rv = ir_targeted_cmd(ALL_DIRS, "move_steps 0 100", 16, 0x5D61);
+					rv = ir_targeted_cmd(ALL_DIRS, "move_steps 0 100", 16, SLAVE);
 				}while(rv == 0);
 				printf("\n\rmoving droplet\n\r");
 				delay_ms(16000);
@@ -189,7 +189,7 @@ void auto_calibration(){
 				while(!rnb_updated){
 					if((get_time() - reset_init_time) > 20000){
 //						do{
-							rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, 0x5D61);				//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+							rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, SLAVE);				//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
 //						}while(rv == 0);
 						delay_ms(20000);
 						sendMotorsMsg(0, dir0_val[0], dir0_val[1], dir0_val[2]);
@@ -250,7 +250,7 @@ void auto_calibration_dir_6(void){
 	while(!rnb_updated){
 		if((get_time() - reset_init_time) > 20000){
 			//			do{
-			rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, 0x5D61);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+			rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
 			//			}while(rv == 0);
 			delay_ms(20000);
 			sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
@@ -260,7 +260,25 @@ void auto_calibration_dir_6(void){
 	rnb_updated = 0;
 	if(last_good_rnb.heading <= 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
 	print_rnb_data();
+	
 	//move calibrating droplet closer to the other droplet for accurate results of range and bearing
+	// to be tested
+	while(last_good_rnb.range > 75){
+		follow_droplet();
+		reset_init_time = get_time();
+		while(!rnb_updated){
+			if((get_time() - reset_init_time) > 20000){
+				//			do{
+				rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+				//			}while(rv == 0);
+				delay_ms(20000);
+				sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
+				reset_init_time = get_time();
+			}
+		}
+		rnb_updated = 0;		
+	}
+	
 	cal_temp_rnb = last_good_rnb;
 	do
 	{
@@ -270,7 +288,7 @@ void auto_calibration_dir_6(void){
 		motor2_6_drift = 0;
 		for(drift_check_i = 0; drift_check_i < 10; drift_check_i++){
 			do{
-				rv = ir_targeted_cmd(ALL_DIRS, "move_steps 6 50", 15, 0x5D61);
+				rv = ir_targeted_cmd(ALL_DIRS, "move_steps 6 50", 15, SLAVE);
 			}while(rv == 0);
 			printf("\n\rmoving droplet\n\r");
 			delay_ms(16000);
@@ -279,7 +297,7 @@ void auto_calibration_dir_6(void){
 			while(!rnb_updated){
 				if((get_time() - reset_init_time) > 20000){
 					//						do{
-					rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, 0x5D61);				//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+					rv = ir_targeted_cmd(ALL_DIRS, "reset", 5, SLAVE);				//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
 					//						}while(rv == 0);
 					delay_ms(20000);
 					sendMotorsMsg(0, dir6_val[0], dir6_val[1], dir6_val[2]);
@@ -338,4 +356,37 @@ void auto_calibration_dir_6(void){
 
 	} while (motor1_6 != 0 || motor2_6 != 0);
 	printf("\n\rCalibration completed for direction 6!\n\r");	
+}
+
+void follow_droplet(void){
+	stop_move();
+	if(is_moving() == -1)
+	{
+		if(last_good_rnb.bearing <= 30 && last_good_rnb.bearing >= -30)
+		{
+			walk(0, 30);
+			//set_rgb(255, 255, 0);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+		}
+		else if((last_good_rnb.bearing <= -150 && last_good_rnb.bearing >= -180) || (last_good_rnb.bearing <= 180 && last_good_rnb.bearing >= 150))
+		{
+			walk(3, 30);
+			//set_rgb(0, 255, 255);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+		}
+		else if(last_good_rnb.bearing > 30 && last_good_rnb.bearing < 150)
+		{
+			walk(7, 20);
+			//set_rgb(255, 0, 255);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+		}
+		else if(last_good_rnb.bearing < -30 && last_good_rnb.bearing > -150)
+		{
+			walk(6, 20);
+
+		}
+	}	
 }
