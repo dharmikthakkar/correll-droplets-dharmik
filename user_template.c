@@ -2,7 +2,7 @@
 
 //#define walk_on
 #define rnb_broadcast_sw
-#define master_calib
+//#define master_calib
 uint32_t last_rnb_time = 0;
 uint32_t last_rnb_print_time = 0;
 
@@ -10,7 +10,7 @@ uint32_t last_rnb_print_time = 0;
  * any code in this function will be run once, when the robot starts.
  */
 void init(){
-	setRGB(0, 0, 255);
+	setRGB(0, 255, 255);
 	delayMS(8000);
 	//walk(0,100);
 	//while(is_moving() != -1);
@@ -381,14 +381,14 @@ void follow_droplet(void){
 		}
 		else if(last_good_rnb.bearing > 30 && last_good_rnb.bearing < 150)
 		{
-			walk(7, 20);		//20 degrees too less. Come up with a better solution
+			walk(7, last_good_rnb.bearing);		//20 degrees too less. Come up with a better solution
 			//set_rgb(255, 0, 255);
 			//delay_ms(250);
 			//set_rgb(0, 0, 0);
 		}
 		else if(last_good_rnb.bearing < -30 && last_good_rnb.bearing > -150)
 		{
-			walk(6, 20);
+			walk(6, (-1)*(last_good_rnb.bearing));
 
 		}
 	}	
