@@ -2,7 +2,7 @@
 
 //#define walk_on
 #define rnb_broadcast_sw
-//#define master_calib
+#define master_calib
 uint32_t last_rnb_time = 0;
 uint32_t last_rnb_print_time = 0;
 
@@ -309,36 +309,60 @@ void auto_calibration_dir_6(void){
 			rnb_updated = 0;
 			print_rnb_data();
 			if(last_good_rnb.heading <= 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
+			/* if the droplet did not move at all, do not consider this iteration */
+			/* to be tested */
+			if(abs(last_good_rnb.heading - cal_temp_rnb.heading) < 50){
+				cal_temp_rnb = last_good_rnb;
+				drift_check_i--;
+				continue;
+			}
+			
+			/* valid iteration */
 			if(last_good_rnb.range > cal_temp_rnb.range && (last_good_rnb.range - cal_temp_rnb.range) > 10){
 				if(last_good_rnb.heading > 135 && last_good_rnb.heading < 315){
 					motor1_6++;
-					motor1_6_drift = (motor1_6_drift + (last_good_rnb.range - cal_temp_rnb.range))/motor1_6;
+					motor1_6_drift = (motor1_6_drift + (last_good_rnb.range - cal_temp_rnb.range))/drift_check_i;		//to be tested for drift_check_i, previously it was based on drift_i.
 					printf("\n\rAverage right motor drift is %d\n\r", motor1_6_drift);
 				}
 				else{
 					motor2_6++;
-					motor2_6_drift = (motor2_6_drift + (last_good_rnb.range - cal_temp_rnb.range))/motor2_6;
+					motor2_6_drift = (motor2_6_drift + (last_good_rnb.range - cal_temp_rnb.range))/drift_check_i;
 					printf("\n\rAverage left motor drift is %d\n\r", motor2_6_drift);
 				}
 			}
 			else if(cal_temp_rnb.range > last_good_rnb.range && (cal_temp_rnb.range - last_good_rnb.range) > 10){
 				if(last_good_rnb.heading > 135 && last_good_rnb.range < 315){
 					motor2_6++;
-					motor2_6_drift = (motor2_6_drift + (cal_temp_rnb.range - last_good_rnb.range))/motor2_6;
+					motor2_6_drift = (motor2_6_drift + (cal_temp_rnb.range - last_good_rnb.range))/drift_check_i;
 					printf("\n\rAverage left motor drift is %d\n\r", motor2_6_drift);					
 				}
 				else{
 					motor1_6++;
-					motor1_6_drift = (motor1_6_drift + (cal_temp_rnb.range - last_good_rnb.range))/motor1_6;
+					motor1_6_drift = (motor1_6_drift + (cal_temp_rnb.range - last_good_rnb.range))/drift_check_i;
 					printf("\n\rAverage right motor drift is %d\n\r", motor1_6_drift);					
 				}
 				
 			}		
 				//move calibrating droplet closer to the other droplet for accurate results of range and bearing
+			while(last_good_rnb.range > 75){
+				follow_droplet();
+				reset_init_time = getTime();
+				while(!rnb_updated){
+					if((getTime() - reset_init_time) > 20000){
+						//			do{
+						rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+						//			}while(rv == 0);
+						delayMS(20000);
+						sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
+						reset_init_time = getTime();
+					}
+				}
+				rnb_updated = 0;
+			}
+					
 	
 			cal_temp_rnb = last_good_rnb;
 			//if left or right drift count equals 2 break for loop no need of third iteration
-			
 			//also check the difference in individual drift values. if the difference is unusually large (more than 100-125) the result is erroneous. this is due to the heading angle varies over a range of 15-20 degrees when the droplet is far
 			//one possible solution could be to not increment the drift count for difference less than  15-20 degrees (to be tested for confirmation)
 		}
@@ -356,7 +380,7 @@ void auto_calibration_dir_6(void){
 		sendMotorsMsg(0, dir6_val[0], dir6_val[1], dir6_val[2]);
 		printf("\n\rUpdating motor settings with %d %d %d\n\r", dir6_val[0], dir6_val[1], dir6_val[2]);
 
-	} while (motor1_6 != 0 || motor2_6 != 0);
+	} while ((motor1_6_drift <= 5) && (motor2_6_drift <= 5));
 	printf("\n\rCalibration completed for direction 6!\n\r");	
 }
 
