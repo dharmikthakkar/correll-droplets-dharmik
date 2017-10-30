@@ -289,6 +289,7 @@ void auto_calibration_dir_6(void){
 		motor1_6_drift = 0;
 		motor2_6_drift = 0;
 		for(drift_check_i = 0; drift_check_i < 10; drift_check_i++){
+			sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);				//write motor settings on every iteration
 			do{
 				rv = irTargetedCmd(ALL_DIRS, "move_steps 6 50", 15, SLAVE);
 			}while(rv == 0);
@@ -302,7 +303,7 @@ void auto_calibration_dir_6(void){
 					rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);				//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
 					//						}while(rv == 0);
 					delayMS(20000);
-					sendMotorsMsg(0, dir6_val[0], dir6_val[1], dir6_val[2]);
+					sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
 					reset_init_time = getTime();
 				}
 			}
@@ -314,10 +315,12 @@ void auto_calibration_dir_6(void){
 			if(abs(last_good_rnb.heading - cal_temp_rnb.heading) < 50){
 				cal_temp_rnb = last_good_rnb;
 				drift_check_i--;
+				printf("\n\r********Invalid Iteration*********\n\r");
 				continue;
 			}
 			
 			/* valid iteration */
+			printf("\n\r********Valid Iteration: %d*********\n\r", drift_check_i);
 			if(last_good_rnb.range > cal_temp_rnb.range && (last_good_rnb.range - cal_temp_rnb.range) > 10){
 				if(last_good_rnb.heading > 135 && last_good_rnb.heading < 315){
 					motor1_6++;
@@ -377,7 +380,7 @@ void auto_calibration_dir_6(void){
 		else if(motor2_6 > motor1_6){
 			dir6_val[2] = dir6_val[2] + (motor2_6_drift*5);
 		}
-		sendMotorsMsg(0, dir6_val[0], dir6_val[1], dir6_val[2]);
+		sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
 		printf("\n\rUpdating motor settings with %d %d %d\n\r", dir6_val[0], dir6_val[1], dir6_val[2]);
 
 	} while ((motor1_6_drift <= 5) && (motor2_6_drift <= 5));
