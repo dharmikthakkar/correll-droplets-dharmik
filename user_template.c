@@ -2,7 +2,7 @@
 
 //#define walk_on
 #define rnb_broadcast_sw
-#define master_calib
+//#define master_calib
 uint32_t last_rnb_time = 0;
 uint32_t last_rnb_print_time = 0;
 
@@ -136,6 +136,7 @@ void sendMotorsMsg(uint8_t dir, int16_t mot0, int16_t mot1, int16_t mot2){
 	do{
 		rv = irSend(ALL_DIRS, (char*)&msg, sizeof(MotorsMsg));
 	}while(rv == 0);
+	printf("\n\rUpdating motor settings dir: %d, %d %d %d\n\r", dir, mot0, mot1, mot2);
 }
 
 void print_rnb_data(void){
@@ -324,25 +325,25 @@ void auto_calibration_dir_6(void){
 			if(last_good_rnb.range > cal_temp_rnb.range && (last_good_rnb.range - cal_temp_rnb.range) > 10){
 				if(last_good_rnb.heading > 135 && last_good_rnb.heading < 315){
 					motor1_6++;
-					motor1_6_drift = (motor1_6_drift + (last_good_rnb.range - cal_temp_rnb.range))/drift_check_i;		//to be tested for drift_check_i, previously it was based on drift_i.
-					printf("\n\rAverage right motor drift is %d\n\r", motor1_6_drift);
+					motor1_6_drift = (motor1_6_drift + (last_good_rnb.range - cal_temp_rnb.range));		//to be tested for drift_check_i, previously it was based on drift_i.
+					//printf("\n\rAverage right motor drift is %d\n\r", motor1_6_drift);
 				}
 				else{
 					motor2_6++;
-					motor2_6_drift = (motor2_6_drift + (last_good_rnb.range - cal_temp_rnb.range))/drift_check_i;
-					printf("\n\rAverage left motor drift is %d\n\r", motor2_6_drift);
+					motor2_6_drift = (motor2_6_drift + (last_good_rnb.range - cal_temp_rnb.range));
+					//printf("\n\rAverage left motor drift is %d\n\r", motor2_6_drift);
 				}
 			}
 			else if(cal_temp_rnb.range > last_good_rnb.range && (cal_temp_rnb.range - last_good_rnb.range) > 10){
 				if(last_good_rnb.heading > 135 && last_good_rnb.range < 315){
 					motor2_6++;
-					motor2_6_drift = (motor2_6_drift + (cal_temp_rnb.range - last_good_rnb.range))/drift_check_i;
-					printf("\n\rAverage left motor drift is %d\n\r", motor2_6_drift);					
+					motor2_6_drift = (motor2_6_drift + (cal_temp_rnb.range - last_good_rnb.range));
+					//printf("\n\rAverage left motor drift is %d\n\r", motor2_6_drift);					
 				}
 				else{
 					motor1_6++;
-					motor1_6_drift = (motor1_6_drift + (cal_temp_rnb.range - last_good_rnb.range))/drift_check_i;
-					printf("\n\rAverage right motor drift is %d\n\r", motor1_6_drift);					
+					motor1_6_drift = (motor1_6_drift + (cal_temp_rnb.range - last_good_rnb.range));
+					//printf("\n\rAverage right motor drift is %d\n\r", motor1_6_drift);					
 				}
 				
 			}		
@@ -371,7 +372,8 @@ void auto_calibration_dir_6(void){
 		}
 		
 		printf("\n\rmotor1_6 = %hu motor2_6 = %hu\n\r", motor1_6, motor2_6);
-		
+		motor1_6_drift = motor1_6_drift/drift_check_i;
+		motor2_6_drift = motor2_6_drift/drift_check_i;	
 		//using the averaged drift_value, reduce the weight of the drifting motor by the averaged value. For eg: if the drift value (left motor i.e motor 2) is 111, set motors to 0 500 -389 from 0 500 -500
 		//180 is a magic number as of now. The check is to ensure that the change in weights is not implemented due to erroneous results
 		if(motor1_6 > motor2_6){
@@ -383,7 +385,7 @@ void auto_calibration_dir_6(void){
 		sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
 		printf("\n\rUpdating motor settings with %d %d %d\n\r", dir6_val[0], dir6_val[1], dir6_val[2]);
 
-	} while ((motor1_6_drift <= 5) && (motor2_6_drift <= 5));
+	} while ((motor1_6_drift > 5) || (motor2_6_drift > 5));
 	printf("\n\rCalibration completed for direction 6!\n\r");	
 }
 
@@ -418,5 +420,6 @@ void follow_droplet(void){
 			walk(6, (-1)*(last_good_rnb.bearing));
 
 		}
-	}	
+	}
+	while(isMoving() != -1);		//wait till the master is moving	
 }
