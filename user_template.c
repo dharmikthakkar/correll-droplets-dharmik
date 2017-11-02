@@ -1,8 +1,6 @@
 #include "user_template.h"
 
-//#define walk_on
-#define rnb_broadcast_sw
-//#define master_calib
+
 uint32_t last_rnb_time = 0;
 uint32_t last_rnb_print_time = 0;
 
@@ -282,6 +280,24 @@ void auto_calibration_dir_6(void){
 		rnb_updated = 0;		
 	}
 	
+	//move calibrating droplet away from the other droplet for avoiding collision
+	while(last_good_rnb.range < 75){
+		moveAway_droplet();
+		reset_init_time = getTime();
+		while(!rnb_updated){
+			if((getTime() - reset_init_time) > 20000){
+				//			do{
+				rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+				//			}while(rv == 0);
+				delayMS(20000);
+				sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
+				reset_init_time = getTime();
+			}
+		}
+		rnb_updated = 0;
+	}
+
+	
 	cal_temp_rnb = last_good_rnb;
 	do
 	{
@@ -363,7 +379,23 @@ void auto_calibration_dir_6(void){
 				}
 				rnb_updated = 0;
 			}
-					
+		
+			//move calibrating droplet away from the other droplet for avoiding collision
+			while(last_good_rnb.range < 75){
+				moveAway_droplet();
+				reset_init_time = getTime();
+				while(!rnb_updated){
+					if((getTime() - reset_init_time) > 20000){
+						//			do{
+						rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+						//			}while(rv == 0);
+						delayMS(20000);
+						sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
+						reset_init_time = getTime();
+					}
+				}
+				rnb_updated = 0;
+			}					
 	
 			cal_temp_rnb = last_good_rnb;
 			//if left or right drift count equals 2 break for loop no need of third iteration
@@ -422,4 +454,39 @@ void follow_droplet(void){
 		}
 	}
 	while(isMoving() != -1);		//wait till the master is moving	
+}
+
+void moveAway_droplet(void){
+	stopMove();
+	printf("\n\rMoving Away..\n\r");
+	if(isMoving() == -1)
+	{
+		if(last_good_rnb.bearing <= 30 && last_good_rnb.bearing >= -30)
+		{
+			walk(3, 75 - last_good_rnb.range);
+			//set_rgb(255, 255, 0);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+		}
+		else if((last_good_rnb.bearing <= -150 && last_good_rnb.bearing >= -180) || (last_good_rnb.bearing <= 180 && last_good_rnb.bearing >= 150))
+		{
+			walk(0, 75 - last_good_rnb.range );
+			//set_rgb(0, 255, 255);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+		}
+		else if(last_good_rnb.bearing > 30 && last_good_rnb.bearing < 150)
+		{
+			walk(7, last_good_rnb.bearing);		//20 degrees too less. Come up with a better solution
+			//set_rgb(255, 0, 255);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+		}
+		else if(last_good_rnb.bearing < -30 && last_good_rnb.bearing > -150)
+		{
+			walk(6, (-1)*(last_good_rnb.bearing));
+
+		}
+	}
+	while(isMoving() != -1);		//wait till the master is moving
 }
