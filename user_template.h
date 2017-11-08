@@ -7,7 +7,7 @@
 #define SLAVE 0x4177
 //#define walk_on
 #define rnb_broadcast_sw
-#define master_calib
+//#define master_calib
 
 typedef struct motors_msg_struct{
 	char flag;
@@ -25,3 +25,4 @@ void		print_rnb_data(void);
 void		auto_calibration_dir_6(void);
 void		follow_droplet(void);
 void		moveAway_droplet(void);
+void		collisionDetected(void);

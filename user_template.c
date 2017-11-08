@@ -231,6 +231,10 @@ void auto_calibration(){
 
 	} while (motor1_0 != 0 || motor2_0 != 0);
 	printf("\n\rCalibration completed!\n\r");
+	for(int blink_i = 0; blink_i<6; blink_i++){
+		setRGB(0, 0, 255*(blink_i%2));
+		delayMS(500);
+	}
 }
 
 void auto_calibration_dir_6(void){
@@ -242,7 +246,7 @@ void auto_calibration_dir_6(void){
 	int8_t drift_check_i=0;
 	rnb cal_temp_rnb;
 	int16_t dir6_val[3] = {0, -500, -500};
-	uint32_t reset_init_time;
+	uint32_t reset_init_time, temp_time;
 	printf("\n\rCalibrating for clockwise rotation i.e. dir 6\n\r");
 	sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
 	rnb_updated = 0;
@@ -261,44 +265,6 @@ void auto_calibration_dir_6(void){
 	if(last_good_rnb.heading <= 0) last_good_rnb.heading = 360 + last_good_rnb.heading;
 	print_rnb_data();
 	
-	//move calibrating droplet closer to the other droplet for accurate results of range and bearing
-	// to be tested
-	//Tested okay! 
-	while(last_good_rnb.range > 75){
-		follow_droplet();
-		reset_init_time = getTime();
-		while(!rnb_updated){
-			if((getTime() - reset_init_time) > 20000){
-				//			do{
-				rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
-				//			}while(rv == 0);
-				delayMS(20000);
-				sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
-				reset_init_time = getTime();
-			}
-		}
-		rnb_updated = 0;		
-	}
-	
-	//move calibrating droplet away from the other droplet for avoiding collision
-	while(last_good_rnb.range < 75){
-		moveAway_droplet();
-		reset_init_time = getTime();
-		while(!rnb_updated){
-			if((getTime() - reset_init_time) > 20000){
-				//			do{
-				rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
-				//			}while(rv == 0);
-				delayMS(20000);
-				sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
-				reset_init_time = getTime();
-			}
-		}
-		rnb_updated = 0;
-	}
-
-	
-	cal_temp_rnb = last_good_rnb;
 	do
 	{
 		motor1_6 = 0;
@@ -306,12 +272,55 @@ void auto_calibration_dir_6(void){
 		motor1_6_drift = 0;
 		motor2_6_drift = 0;
 		for(drift_check_i = 0; drift_check_i < 10; drift_check_i++){
+			//move calibrating droplet closer to the other droplet for accurate results of range and bearing
+			while(last_good_rnb.range > 75){
+				follow_droplet();
+				reset_init_time = getTime();
+				while(!rnb_updated){
+					if((getTime() - reset_init_time) > 20000){
+						//			do{
+						rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+						//			}while(rv == 0);
+						delayMS(20000);
+						sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
+						reset_init_time = getTime();
+					}
+				}
+				rnb_updated = 0;
+			}
+				
+			//move calibrating droplet away from the other droplet for avoiding collision
+			while(last_good_rnb.range < 75){
+				moveAway_droplet();
+				reset_init_time = getTime();
+				while(!rnb_updated){
+					if((getTime() - reset_init_time) > 20000){
+						//			do{
+						rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
+						//			}while(rv == 0);
+						delayMS(20000);
+						sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
+						reset_init_time = getTime();
+					}
+				}
+				rnb_updated = 0;
+			}
+				
+			cal_temp_rnb = last_good_rnb;
 			sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);				//write motor settings on every iteration
 			do{
 				rv = irTargetedCmd(ALL_DIRS, "move_steps 6 50", 15, SLAVE);
 			}while(rv == 0);
 			printf("\n\rmoving droplet\n\r");
-			delayMS(16000);
+			temp_time = getTime();
+			while((getTime() - temp_time) < 16000){
+				if(checkCollisions() != 0){
+					collisionDetected();
+					drift_check_i--;
+					continue;
+				}
+			}
+			//delayMS(16000);
 			rnb_updated = 0;
 			reset_init_time = getTime();
 			while(!rnb_updated){
@@ -363,42 +372,7 @@ void auto_calibration_dir_6(void){
 				}
 				
 			}		
-				//move calibrating droplet closer to the other droplet for accurate results of range and bearing
-			while(last_good_rnb.range > 75){
-				follow_droplet();
-				reset_init_time = getTime();
-				while(!rnb_updated){
-					if((getTime() - reset_init_time) > 20000){
-						//			do{
-						rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
-						//			}while(rv == 0);
-						delayMS(20000);
-						sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
-						reset_init_time = getTime();
-					}
-				}
-				rnb_updated = 0;
-			}
-		
-			//move calibrating droplet away from the other droplet for avoiding collision
-			while(last_good_rnb.range < 75){
-				moveAway_droplet();
-				reset_init_time = getTime();
-				while(!rnb_updated){
-					if((getTime() - reset_init_time) > 20000){
-						//			do{
-						rv = irTargetedCmd(ALL_DIRS, "reset", 5, SLAVE);					//if slave does not send rnb data within 20 seconds, reset it and write last valid motor settings
-						//			}while(rv == 0);
-						delayMS(20000);
-						sendMotorsMsg(6, dir6_val[0], dir6_val[1], dir6_val[2]);
-						reset_init_time = getTime();
-					}
-				}
-				rnb_updated = 0;
-			}					
-	
-			cal_temp_rnb = last_good_rnb;
-			//if left or right drift count equals 2 break for loop no need of third iteration
+
 			//also check the difference in individual drift values. if the difference is unusually large (more than 100-125) the result is erroneous. this is due to the heading angle varies over a range of 15-20 degrees when the droplet is far
 			//one possible solution could be to not increment the drift count for difference less than  15-20 degrees (to be tested for confirmation)
 		}
@@ -419,6 +393,30 @@ void auto_calibration_dir_6(void){
 
 	} while ((motor1_6_drift > 5) || (motor2_6_drift > 5));
 	printf("\n\rCalibration completed for direction 6!\n\r");	
+}
+void collisionDetected(void){
+	uint8_t rv = 0;
+	printf("\n\rCollsion Detected. Moving Away\n\r");
+	stopMove();
+	do{
+		rv = irTargetedCmd(ALL_DIRS, "stop_walk", 9, SLAVE);
+	}while(rv == 0);
+	if(isMoving() == -1)
+	{
+		if(last_good_rnb.bearing <= 90 && last_good_rnb.bearing >= -90)
+		{
+			walk(3, 90);
+			//set_rgb(255, 255, 0);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+		}
+		else walk(0, 90);
+			//set_rgb(0, 255, 255);
+			//delay_ms(250);
+			//set_rgb(0, 0, 0);
+	}
+	while(isMoving() != -1);	
+	
 }
 
 void follow_droplet(void){
@@ -453,7 +451,9 @@ void follow_droplet(void){
 
 		}
 	}
-	while(isMoving() != -1);		//wait till the master is moving	
+	while(isMoving() != -1){		//wait till the master is moving	
+		if(checkCollisions() != 0) collisionDetected();
+	}
 }
 
 void moveAway_droplet(void){
