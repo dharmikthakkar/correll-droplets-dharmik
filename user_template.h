@@ -7,7 +7,7 @@
 #define SLAVE 0x4177
 //#define walk_on
 #define rnb_broadcast_sw
-//#define master_calib
+#define master_calib
 
 typedef struct motors_msg_struct{
 	char flag;

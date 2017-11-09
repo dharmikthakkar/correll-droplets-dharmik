@@ -19,6 +19,13 @@ void init(){
 	//walk(7,80);
 	//while(is_moving() != -1);
 	//set_rgb(0, 0, 0);
+	//while(1){
+		//if(isMoving() == -1)	moveSteps(0, 100);
+		//if(checkCollisions()>0){
+			//collisionDetected();
+		//}
+		//delayMS(2000);
+	//}
 	last_rnb_time = getTime();
 //	ir_cmd(ALL_DIRS, "set_motors 0 0 200 200", 22);
 #ifdef master_calib
@@ -312,14 +319,16 @@ void auto_calibration_dir_6(void){
 				rv = irTargetedCmd(ALL_DIRS, "move_steps 6 50", 15, SLAVE);
 			}while(rv == 0);
 			printf("\n\rmoving droplet\n\r");
-			temp_time = getTime();
-			while((getTime() - temp_time) < 16000){
-				if(checkCollisions() != 0){
-					collisionDetected();
-					drift_check_i--;
-					continue;
-				}
-			}
+			/* following collision detection code interfered with moving the slave, thus commented */
+			//temp_time = getTime();
+			//while((getTime() - temp_time) < 16000){
+				//if(checkCollisions() != 0){
+					//collisionDetected();
+					//drift_check_i--;
+					//continue;
+				//}
+				//delayMS(2000);
+			//}
 			//delayMS(16000);
 			rnb_updated = 0;
 			reset_init_time = getTime();
@@ -401,16 +410,19 @@ void collisionDetected(void){
 	do{
 		rv = irTargetedCmd(ALL_DIRS, "stop_walk", 9, SLAVE);
 	}while(rv == 0);
+	setRGB(255, 0, 0);
+	delayMS(500);
+	setRGB(0, 255, 255);
 	if(isMoving() == -1)
 	{
 		if(last_good_rnb.bearing <= 90 && last_good_rnb.bearing >= -90)
 		{
-			walk(3, 90);
+			walk(3,  30);
 			//set_rgb(255, 255, 0);
 			//delay_ms(250);
 			//set_rgb(0, 0, 0);
 		}
-		else walk(0, 90);
+		else walk(0,30);
 			//set_rgb(0, 255, 255);
 			//delay_ms(250);
 			//set_rgb(0, 0, 0);
@@ -453,6 +465,7 @@ void follow_droplet(void){
 	}
 	while(isMoving() != -1){		//wait till the master is moving	
 		if(checkCollisions() != 0) collisionDetected();
+		delayMS(2000);
 	}
 }
 
